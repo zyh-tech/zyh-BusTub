@@ -3,6 +3,30 @@
 //                         BusTub
 //
 // extendible_hash_table.cpp
+//Extendible Hash Table 由一个 directory 和多个 bucket 组成。
+
+//directory: 存放指向 bucket 的指针，是一个数组。
+//用于寻找 key 对应 value 所在的 bucket。
+//bucket: 存放 value，是一个链表。一个 bucket 可以至多存放指定数量的 value。
+
+/*
+Extendible Hash Table 与 Chained Hash Table 最大的区别是，
+Extendible Hash 中，不同的指针可以指向同一个 bucket，
+而 Chained Hash 中每个指针对应一个 bucket。
+Extendible Hash 中，如果 bucket 到达容量上限，则对桶会进行一次 split 操作
+
+Extendible Hash 的插入流程。
+将一个键值对 (K,V) 插入哈希表时，会先用哈希函数计算 K 的哈希值 H(K)，
+并用此哈希值计算出索引，将 V 放入索引对应的 bucket 中。
+Extendible Hash 计算索引的方式是直接取哈希值 H(K) 的低 n 位。
+
+当需要插入 K 时，发现 bucket 已满，首先判断当前 bucket 的 local depth 是否等于 global depth：
+若相等，即仅有一个指针指向 bucket，需要对 dir 扩容。
+若不相等，即有多个指针指向 bucket，则无需扩容，将原来指向此 bucket 的指针重新分配。
+
+*/
+
+
 //
 // Identification: src/container/hash/extendible_hash_table.cpp
 //
@@ -96,6 +120,13 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
 
     if (target_bucket->GetDepth() == GetGlobalDepthInternal()) {
       //桶的深度等于全局深度，需要扩容
+      /*
+          global depth++
+          directory 容量翻倍
+          创建一个新的 bucket
+          重新安排指针
+          重新分配 KV 对
+      */
       global_depth_++;
       int capacity = dir_.size();
       dir_.resize(capacity << 1);
