@@ -209,6 +209,59 @@ transaction 就是 Bustub 里的事务。在 Project2 中，可以暂时不用�
 在完成整个 Insert 操作后，释放所有锁。
 
 
-Delete
+### Delete
 
 和 Insert 基本一样。仅是判断是否安全的方法不同（检测 min size）。需要另外注意的是，当需要 steal/merge sibling 时，也需要对 sibling 加锁。并在完成 steal/merge 后马上释放。这里是为了避免其他线程正在对 sibling 进行 Search/Insert 操作，从而发生 data race。这里的加锁就不需要在 transaction 里记录了，只是临时使用。
+
+
+
+# 问题记录：When should we unlatch and unpin pages?
+
+首先，为什么要 unpin page？这个应该比较清楚了，避免对 buffer pool 一直占用。可以理解为一种资源的泄露。
+
+说到资源泄露，可以自然地想到 RAII。RAII 的主要思想是，在初始化时获取资源，在析构时释放资源。这样就避免了程序中途退出，或抛出异常后，资源没有被成功释放。常常用在 open socket、acquire mutex 等操作中。其实我们在 Project1 中已经遇到了 RAII 的用法：
+
+```
+std::scoped_lock<std::mutex> lock(mutex_);
+```
+
+这里其实就是一个经典的 RAII。在初始化 lock 时，调用 mutex_.Lock()，在析构 lock 时，调用 mutex_.Unlock()。这样就通过简单的一行代码成功保证了在 lock 的作用域中对 mutex 全程上锁。离开 lock 的作用域后，由于 lock 析构，锁自动释放。
+
+一开始，我也想过用这种方法来管理 page。例如编写一个类 PageManager，在初始化时，fetch page & latch page，在析构时，unlatch page & unpin page。这个想法好像还行，但是遇到了一个明显的问题：page 会在不同函数间互相传递，以及存在离开作用域后仍需持有 page 资源的情况，比如 latch crabbing 时可能需要跨函数持锁。或许可以通过传递 PageManager 指针的方式来处理，但这样似乎更加复杂了。
+
+此外，还有一个问题。比如 Insert 操作时，假如需要分裂，会向下递归沿途持锁，然后向上递归进行分裂。在分裂时，需要重新从 buffer pool 获取 page。要注意的是，这里获取 page 时不能够对 page 加锁，因为此前向下递归时 page 已经加过锁了，同一个线程再加锁会抛异常。
+
+比如这里的例子。在向上递归时，我们已经获取过 parent page 的锁，因此再次从 buffer pool 获取 parent page 时，无需对 parent page 再次加锁。
+
+那有没有办法能够知道我们对哪些 page 加过锁？transaction。也就是说，如果一个 page 出现在 transaction 的 page set 中，就代表这个线程已经持有了这个 page 的锁。
+
+![alt 属性文本](https://pic4.zhimg.com/80/v2-4a6d041d9fad217d98ad8b5ad74e1927_1440w.webp)
+比如这里的例子。在向上递归时，我们已经获取过 parent page 的锁，因此再次从 buffer pool 获取 parent page 时，无需对 parent page 再次加锁。
+
+那有没有办法能够知道我们对哪些 page 加过锁？transaction。也就是说，如果一个 page 出现在 transaction 的 page set 中，就代表这个线程已经持有了这个 page 的锁。
+
+当然，通过认真分析各个操作获取 page 的路径，我们也可以发现持锁的规律。
+
+### Search
+
+仅向下递归，拿到 child page 就释放 parent page。这个比较简单。获取 page 的路径从 root 到 leaf 是一条线。到达 leaf 时，仅持有 leaf 的资源。
+
+### Insert
+
+先向下递归，可能会持有多个 parent page 的锁。获取 page 的路径从 root 到 leaf 也是一条线，区别是，到达 leaf 时，还可能持有其祖先的资源。再向上递归。向上递归的路径与向下递归的完全重合，仅是方向相反。因此，向上递归时不需要重复获取 page 资源，可以直接从 transaction 里拿到 page 指针，绕过对 buffer pool 的访问。在分裂时，新建的 page 由于还未连接到树中，不可能被其他线程访问到，因此也不需要上锁，仅需 unpin。
+
+### Delete
+
+向下递归的情况与 Insert 相同，路径为一条线。到达 leaf page 后，情况有所不同。由于可能需要对 sibling 进行 steal/merge，还需获取 sibling 的资源。因此，在向上递归时，主要路径也与向下递归的重合，但除了这条线，还会沿途获取 sibling 的资源，sibling 需要加锁，而 parent page 无需再次加锁。sibling 只是暂时使用，使用完之后可以直接释放。而向下递归路径上的锁在整个 Delete 操作完成之后再释放。
+
+![alt 属性文本](https://pic1.zhimg.com/80/v2-e3a564bea90a2cf9e901c7ae610221d4_1440w.webp)
+经过上面的讨论，可以得出我们释放资源的时机：向下递归路径上的 page 需要全程持有（除非节点安全，提前释放），在整个操作完成后统一释放。其余 page 要么是重复获取，要么是暂时获取。重复获取无需加锁，使用完后直接 unpin。暂时获取（steal/merge sibling）需要加锁，使用完后 unlatch & unpin。
+
+
+
+# 后续优化Optimization
+对于 latch crabbing，存在一种比较简单的优化。在普通的 latch crabbing 中，Insert/Delete 均需对节点上写锁，而越上层的节点被访问的可能性越大，锁竞争也越激烈，频繁对上层节点上互斥的写锁对性能影响较大。因此可以做出如下优化：
+
+Search 操作不变，在 Insert/Delete 操作中，我们可以先乐观地认为不会发生 split/steal/merge，对沿途的节点上读锁，并及时释放，对 leaf page 上写锁。当发现操作对 leaf page 确实不会造成 split/steal/merge 时，可以直接完成操作。当发现操作会使 leaf page split/steal/merge 时，则放弃所有持有的锁，从 root page 开始重新悲观地进行这次操作，即沿途上写锁。
+
+这个优化实现起来比较简单，修改一下 FindLeaf() 即可。
