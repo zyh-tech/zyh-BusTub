@@ -1,4 +1,4 @@
-## Task 2,3 : HASH TABLE IMPLEMENTATION + CONCURRENCY CONTROL
+## Task 5 : HASH TABLE IMPLEMENTATION + CONCURRENCY CONTROL
 
 在这两个部分中，我们需要实现一个线程安全的可扩展哈希表。将其实现并不困难，难点在于如何在降低锁粒度、提高并发性的情况下保证线程安全。
 

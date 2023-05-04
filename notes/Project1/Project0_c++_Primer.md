@@ -1,4 +1,4 @@
-# Project 1 : C++ Primer
+# Project 0 : C++ Primer
 
 本实验的目的熟悉实验环境和c++基本语法。
 在本实验中需要实现三个类，其中`Matrix`作为矩阵类型的基类，存放指向实际矩阵元素数组的指针；`RowMatrix` 为 `Matrix` 的子类，存放指向各矩阵行的指针，并提供按行列数访问矩阵元素的接口；`RowMatrixOperations`提供矩阵相加、相乘函数的接口。
