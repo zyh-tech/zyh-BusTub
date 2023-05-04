@@ -95,6 +95,7 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
     auto target_bucket = dir_[index];
 
     if (target_bucket->GetDepth() == GetGlobalDepthInternal()) {
+      //桶的深度等于全局深度，需要扩容
       global_depth_++;
       int capacity = dir_.size();
       dir_.resize(capacity << 1);
@@ -116,6 +117,7 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
       }
     }
 
+    //桶分裂
     num_buckets_++;
 
     for (size_t i = 0; i < dir_.size(); i++) {
