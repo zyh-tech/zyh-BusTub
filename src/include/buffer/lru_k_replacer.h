@@ -142,11 +142,13 @@ class LRUKReplacer {
   std::mutex latch_;
 
   std::unordered_map<frame_id_t, size_t> access_count_;
-
   std::list<frame_id_t> history_list_;
+  
+  //history_map_记录每个帧在history_list_的位置
   std::unordered_map<frame_id_t, std::list<frame_id_t>::iterator> history_map_;
 
   std::list<frame_id_t> cache_list_;
+  //cache_map_记录每个帧在cache_list_的位置
   std::unordered_map<frame_id_t, std::list<frame_id_t>::iterator> cache_map_;
 
   std::unordered_map<frame_id_t, bool> is_evictable_;
