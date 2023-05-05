@@ -94,7 +94,7 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &val
   return GetSize();
 }
 
-//将当前page的一半数据移动到recipient
+//将当前page的一半数据移动到recipient,服务于分裂操作
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfTo(BPlusTreeLeafPage *recipient) {
   int start_split_indx = GetMinSize();
@@ -131,7 +131,7 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveAndDeleteRecord(const KeyType &key, const
   return GetSize();
 }
 
-//将所有数据移动到recipient
+//将所有数据移动到recipient，服务于合并操作
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveAllTo(BPlusTreeLeafPage *recipient) {
   recipient->CopyNFrom(array_, GetSize());
@@ -139,7 +139,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveAllTo(BPlusTreeLeafPage *recipient) {
   SetSize(0);
 }
 
-//将数据的第一项移动到recipient的末尾
+//将数据的第一项移动到recipient的末尾，服务于偷取兄弟KV操作
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeLeafPage *recipient) {
   auto first_item = GetItem(0);
@@ -154,7 +154,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::CopyLastFrom(const MappingType &item) {
   IncreaseSize(1);
 }
 
-//将数据的最后一项移动到recipient的头
+//将数据的最后一项移动到recipient的头，服务于偷取兄弟KV操作
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeLeafPage *recipient) {
   auto last_item = GetItem(GetSize() - 1);

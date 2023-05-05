@@ -127,6 +127,7 @@ auto BPLUSTREE_TYPE::InsertIntoLeaf(const KeyType &key, const ValueType &value, 
   auto risen_key = sibling_leaf_node->KeyAt(0);
   InsertIntoParent(node, risen_key, sibling_leaf_node, transaction);
 
+  //需要先释放锁再调用unpin
   leaf_page->WUnlatch();
   buffer_pool_manager_->UnpinPage(leaf_page->GetPageId(), true);
   buffer_pool_manager_->UnpinPage(sibling_leaf_node->GetPageId(), true);
@@ -134,7 +135,7 @@ auto BPLUSTREE_TYPE::InsertIntoLeaf(const KeyType &key, const ValueType &value, 
 }
 
 
-//分裂函数
+//分裂函数，借助于leaf_page和internal_page中的MoveHalfTo函数实现
 INDEX_TEMPLATE_ARGUMENTS
 template <typename N>
 auto BPLUSTREE_TYPE::Split(N *node) -> N * {
@@ -179,9 +180,9 @@ void BPLUSTREE_TYPE::InsertIntoParent(BPlusTreePage *old_node, const KeyType &ke
 
     auto *new_root = reinterpret_cast<InternalPage *>(page->GetData());
     new_root->Init(root_page_id_, INVALID_PAGE_ID, internal_max_size_);
-
+    //借助PopulateNewRoot函数完成新的根节点的设置
     new_root->PopulateNewRoot(old_node->GetPageId(), key, new_node->GetPageId());
-
+    //重新设定父子节点之间的指针
     old_node->SetParentPageId(new_root->GetPageId());
     new_node->SetParentPageId(new_root->GetPageId());
 
@@ -525,12 +526,12 @@ auto BPLUSTREE_TYPE::FindLeaf(const KeyType &key, Operation operation, Transacti
     auto child_node = reinterpret_cast<BPlusTreePage *>(child_page->GetData());
 
     if (operation == Operation::SEARCH) {
-      //如果是查找，则加读锁
+      //如果是查找，则给子页加读锁，同时当前页的锁可以释放
       child_page->RLatch();
       page->RUnlatch();
       buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
     } else if (operation == Operation::INSERT) {
-      //如果是插入，则加写锁
+      //如果是插入，则加写锁，同时当前页的锁不能直接释放
       child_page->WLatch();
       transaction->AddIntoPageSet(page);
       
@@ -542,7 +543,7 @@ auto BPLUSTREE_TYPE::FindLeaf(const KeyType &key, Operation operation, Transacti
         ReleaseLatchFromQueue(transaction);
       }
     } else if (operation == Operation::DELETE) {
-      //如果是删除，则加写锁
+      //如果是删除，则加写锁，，同时当前页的锁不能直接释放
       child_page->WLatch();
       transaction->AddIntoPageSet(page);
 
@@ -557,6 +558,7 @@ auto BPLUSTREE_TYPE::FindLeaf(const KeyType &key, Operation operation, Transacti
   return page;
 }
 
+//实现依次释放锁，使得安全的并发操作B+树
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::ReleaseLatchFromQueue(Transaction *transaction) {
   while (!transaction->GetPageSet()->empty()) {
@@ -573,6 +575,7 @@ void BPLUSTREE_TYPE::ReleaseLatchFromQueue(Transaction *transaction) {
 
 /**
  * @return Page id of the root of this tree
+ * //加锁root_page_id_的真实性
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::GetRootPageId() -> page_id_t {

@@ -81,7 +81,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Lookup(const KeyType &key, const KeyCompara
   return std::prev(target)->second;
 }
 
-//设置新的根old_value在索引0，new_value在索引1
+//设置新的根old_value在索引0，new_value在索引1，用于特殊处理当删除的key在根节点中的情况
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::PopulateNewRoot(const ValueType &old_value, const KeyType &new_key,
                                                      const ValueType &new_value) {
@@ -108,7 +108,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value,
   return GetSize();
 }
 
-//将 [GetMinSize(),:]部分移动到recipient
+//将 [GetMinSize(),:]部分移动到recipient，服务于分裂操作
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient,
                                                 BufferPoolManager *buffer_pool_manager) {
@@ -140,7 +140,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Remove(int index) {
   IncreaseSize(-1);
 }
 
-//移除且返回唯一的孩子
+//移除当前节点且返回唯一的孩子，服务于根节点只有一个孩子时的特殊情况
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveAndReturnOnlyChild() -> ValueType {
   ValueType only_value = ValueAt(0);
@@ -148,7 +148,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveAndReturnOnlyChild() -> ValueType {
   return only_value;
 }
 
-//将middle_key后的所有k复制到recipient上
+//将middle_key后的所有k复制到recipient上，服务于合并操作
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveAllTo(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
                                                BufferPoolManager *buffer_pool_manager) {
@@ -157,7 +157,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveAllTo(BPlusTreeInternalPage *recipient,
   SetSize(0);
 }
 
-//将当前的头移动到recipient的尾
+//将当前的头移动到recipient的尾，服务于偷取兄弟节点kv的操作
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
                                                       BufferPoolManager *buffer_pool_manager) {
@@ -181,7 +181,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyLastFrom(const MappingType &pair, Buffe
   buffer_pool_manager->UnpinPage(page->GetPageId(), true);
 }
 
-//将当前的 尾 移动到 recipient 的头
+//将当前的 尾 移动到 recipient 的头，服务于偷取兄弟节点kv的操作
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
                                                        BufferPoolManager *buffer_pool_manager) {
