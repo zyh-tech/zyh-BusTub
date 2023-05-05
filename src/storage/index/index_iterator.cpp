@@ -38,8 +38,10 @@ auto INDEXITERATOR_TYPE::IsEnd() -> bool {
 INDEX_TEMPLATE_ARGUMENTS
 auto INDEXITERATOR_TYPE::operator*() -> const MappingType & { return leaf_->GetItem(index_); }
 
+
 INDEX_TEMPLATE_ARGUMENTS
 auto INDEXITERATOR_TYPE::operator++() -> INDEXITERATOR_TYPE & {
+  //如果当前index是当前节点的最右，则走向下一个page，否则直接加index即可
   if (index_ == leaf_->GetSize() - 1 && leaf_->GetNextPageId() != INVALID_PAGE_ID) {
     auto next_page = buffer_pool_manager_->FetchPage(leaf_->GetNextPageId());
 

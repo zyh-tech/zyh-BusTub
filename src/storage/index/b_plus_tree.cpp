@@ -434,7 +434,7 @@ auto BPLUSTREE_TYPE::AdjustRoot(BPlusTreePage *old_root_node) -> bool {
 /*****************************************************************************
  * INDEX ITERATOR
  *****************************************************************************/
-/*
+/*  //找到最左节点迭代器
  * Input parameter is void, find the leaftmost leaf page first, then construct
  * index iterator
  * @return : index iterator
@@ -449,7 +449,7 @@ auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
   return INDEXITERATOR_TYPE(buffer_pool_manager_, leftmost_page, 0);
 }
 
-/*
+/*  //找到key对应的迭代器位置
  * Input parameter is low key, find the leaf page that contains the input key
  * first, then construct index iterator
  * @return : index iterator
@@ -471,6 +471,7 @@ auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE {
  * of the key/value pair in the leaf node
  * @return : index iterator
  */
+//找到最右迭代器
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE {
   if (root_page_id_ == INVALID_PAGE_ID) {
@@ -510,6 +511,7 @@ auto BPLUSTREE_TYPE::FindLeaf(const KeyType &key, Operation operation, Transacti
     auto *i_node = reinterpret_cast<InternalPage *>(node);
 
     page_id_t child_node_page_id;
+    //根据当前是找最左、最右还是目标key来决定进入的孩子节点
     if (leftMost) {
       child_node_page_id = i_node->ValueAt(0);
     } else if (rightMost) {
@@ -523,14 +525,16 @@ auto BPLUSTREE_TYPE::FindLeaf(const KeyType &key, Operation operation, Transacti
     auto child_node = reinterpret_cast<BPlusTreePage *>(child_page->GetData());
 
     if (operation == Operation::SEARCH) {
+      //如果是查找，则加读锁
       child_page->RLatch();
       page->RUnlatch();
       buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
     } else if (operation == Operation::INSERT) {
+      //如果是插入，则加写锁
       child_page->WLatch();
       transaction->AddIntoPageSet(page);
-
-      // child node is safe, release all locks on ancestors
+      
+      // child node is safe, release all locks on ancestors。孩子节点不会发生分裂，则祖先的锁都可释放
       if (child_node->IsLeafPage() && child_node->GetSize() < child_node->GetMaxSize() - 1) {
         ReleaseLatchFromQueue(transaction);
       }
@@ -538,19 +542,18 @@ auto BPLUSTREE_TYPE::FindLeaf(const KeyType &key, Operation operation, Transacti
         ReleaseLatchFromQueue(transaction);
       }
     } else if (operation == Operation::DELETE) {
+      //如果是删除，则加写锁
       child_page->WLatch();
       transaction->AddIntoPageSet(page);
 
-      // child node is safe, release all locks on ancestors
+      // child node is safe, release all locks on ancestors，孩子节点不会发生合并，则祖先的锁都可释放
       if (child_node->GetSize() > child_node->GetMinSize()) {
         ReleaseLatchFromQueue(transaction);
       }
     }
-
     page = child_page;
     node = child_node;
   }
-
   return page;
 }
 
