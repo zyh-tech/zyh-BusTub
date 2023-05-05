@@ -5,6 +5,11 @@
 //
 // Identification: src/page/b_plus_tree_leaf_page.cpp
 //
+/*
+Leaf Tree Page 中，Pair 的 Key 也是 Key，而 Value 则是 RID（RID 即是 PageID+SlotID，
+用来定位一条记录在哪个 Page 的具体哪个 Offset）。
+而 Leaf 中的 K-V 则是一一对应的，RID[i] 就是 Key[i] 对应的记录。
+*/
 // Copyright (c) 2018, Carnegie Mellon University Database Group
 //
 //===----------------------------------------------------------------------===//

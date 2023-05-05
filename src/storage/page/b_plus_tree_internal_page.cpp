@@ -6,6 +6,11 @@
 // Identification: src/page/b_plus_tree_internal_page.cpp
 //
 // Copyright (c) 2018, Carnegie Mellon University Database Group
+/*
+Internal Tree Page 中，Pair 的 Key 就是 Key，而 Value 是 Page ID。
+Key[i] <= PageID[i] < Key[i+1]，而 Key[0] 是无效的，
+可以认为 PageID[0] 存放了比 Key[1] 小的所有 Key。自然，PageID[-1] 存放了比 Key[-1] 大的所有 Key。
+*/
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,6 +69,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) const ->
 
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Lookup(const KeyType &key, const KeyComparator &comparator) const -> ValueType {
+  //使用二分查找
   auto target = std::lower_bound(array_ + 1, array_ + GetSize(), key,
                                  [&comparator](const auto &pair, auto k) { return comparator(pair.first, k) < 0; });
   if (target == array_ + GetSize()) {
@@ -75,6 +81,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Lookup(const KeyType &key, const KeyCompara
   return std::prev(target)->second;
 }
 
+//设置新的根old_value在索引0，new_value在索引1
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::PopulateNewRoot(const ValueType &old_value, const KeyType &new_key,
                                                      const ValueType &new_value) {
@@ -84,10 +91,13 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::PopulateNewRoot(const ValueType &old_value,
   SetSize(2);
 }
 
+//在值为old_value的节点后插入新的kv
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value, const KeyType &new_key,
                                                      const ValueType &new_value) -> int {
+  //计算新插入节点的索引
   auto new_value_idx = ValueIndex(old_value) + 1;
+  //将插入位置后的所有数字向后移动一位，为了避免覆盖，采用move_backward而不是move
   std::move_backward(array_ + new_value_idx, array_ + GetSize(), array_ + GetSize() + 1);
 
   array_[new_value_idx].first = new_key;
@@ -98,6 +108,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value,
   return GetSize();
 }
 
+//将 [GetMinSize(),:]部分移动到recipient
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient,
                                                 BufferPoolManager *buffer_pool_manager) {
@@ -107,6 +118,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient
   recipient->CopyNFrom(array_ + start_split_indx, original_size - start_split_indx, buffer_pool_manager);
 }
 
+//从*items开始，向后复制size个
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager) {
   std::copy(items, items + size, array_ + GetSize());
@@ -121,12 +133,14 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, Buf
   IncreaseSize(size);
 }
 
+//移除索引index
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Remove(int index) {
   std::move(array_ + index + 1, array_ + GetSize(), array_ + index);
   IncreaseSize(-1);
 }
 
+//移除且返回唯一的孩子
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveAndReturnOnlyChild() -> ValueType {
   ValueType only_value = ValueAt(0);
@@ -134,6 +148,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveAndReturnOnlyChild() -> ValueType {
   return only_value;
 }
 
+//将middle_key后的所有k复制到recipient上
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveAllTo(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
                                                BufferPoolManager *buffer_pool_manager) {
@@ -142,6 +157,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveAllTo(BPlusTreeInternalPage *recipient,
   SetSize(0);
 }
 
+//将当前的头移动到recipient的尾
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
                                                       BufferPoolManager *buffer_pool_manager) {
@@ -153,6 +169,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeInternalPage *rec
   IncreaseSize(-1);
 }
 
+//向末尾加入pair
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyLastFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager) {
   *(array_ + GetSize()) = pair;
@@ -164,6 +181,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyLastFrom(const MappingType &pair, Buffe
   buffer_pool_manager->UnpinPage(page->GetPageId(), true);
 }
 
+//将当前的 尾 移动到 recipient 的头
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
                                                        BufferPoolManager *buffer_pool_manager) {
@@ -174,6 +192,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeInternalPage *re
   IncreaseSize(-1);
 }
 
+//向头部加入pair
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyFirstFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager) {
   std::move_backward(array_, array_ + GetSize(), array_ + GetSize() + 1);

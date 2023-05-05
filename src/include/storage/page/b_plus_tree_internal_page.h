@@ -59,6 +59,7 @@ class BPlusTreeInternalPage : public BPlusTreePage {
 
  private:
   // Flexible array member for page data.
+  //利用 flexible array 的特性来自动填充 page data 4KB 减掉 header 24byte 后剩余的内存。
   MappingType array_[1];
   void CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager);
   void CopyLastFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager);
