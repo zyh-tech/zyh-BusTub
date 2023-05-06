@@ -37,7 +37,7 @@ using index_oid_t = uint32_t;
 
 /**
  * The TableInfo class maintains metadata about a table.
- * TableInfo类维护关于表的元数据。
+ * TableInfo类维护关于表的元数据
  */
 struct TableInfo {
   /**
@@ -49,18 +49,19 @@ struct TableInfo {
    */
   TableInfo(Schema schema, std::string name, std::unique_ptr<TableHeap> &&table, table_oid_t oid)
       : schema_{std::move(schema)}, name_{std::move(name)}, table_{std::move(table)}, oid_{oid} {}
-  /** The table schema */
+  /** The table schema 表的概要信息*/
   Schema schema_;
-  /** The table name */
+  /** The table name 表名*/
   const std::string name_;
-  /** An owning pointer to the table heap */
+  /** An owning pointer to the table heap 指向table heap的指针*/
   std::unique_ptr<TableHeap> table_;
-  /** The table OID */
+  /** The table OID 表的id*/
   const table_oid_t oid_;
 };
 
 /**
  * The IndexInfo class maintains metadata about a index.
+ * IndexInfo类维护有关索引的元数据
  */
 struct IndexInfo {
   /**
@@ -80,21 +81,22 @@ struct IndexInfo {
         index_oid_{index_oid},
         table_name_{std::move(table_name)},
         key_size_{key_size} {}
-  /** The schema for the index key */
+  /** The schema for the index key 索引的key*/
   Schema key_schema_;
-  /** The name of the index */
+  /** The name of the index 索引的名称*/
   std::string name_;
-  /** An owning pointer to the index */
+  /** An owning pointer to the index 指向索引的指针*/
   std::unique_ptr<Index> index_;
-  /** The unique OID for the index */
+  /** The unique OID for the index 索引的id*/
   index_oid_t index_oid_;
-  /** The name of the table on which the index is created */
+  /** The name of the table on which the index is created 创建该索引的表名*/
   std::string table_name_;
-  /** The size of the index key, in bytes */
+  /** The size of the index key, in bytes 索引key的长度*/
   const size_t key_size_;
 };
 
 /**
+ * Catalog是一个非持久性目录，设计用于DBMS执行引擎中的执行器。它处理表创建、表查找、索引创建和索引查找。
  * The Catalog is a non-persistent catalog that is designed for
  * use by executors within the DBMS execution engine. It handles
  * table creation, table lookup, index creation, and index lookup.
@@ -109,6 +111,7 @@ class Catalog {
 
   /**
    * Construct a new Catalog instance.
+   * 包含BufferPoolManager，LockManager,LogManager
    * @param bpm The buffer pool manager backing tables created by this catalog
    * @param lock_manager The lock manager in use by the system
    * @param log_manager The log manager in use by the system
@@ -118,6 +121,8 @@ class Catalog {
 
   /**
    * Create a new table and return its metadata.
+   * 创建一个新的表并返回其元数据
+   * 需要输入创建表的事务，表名，表的概要信息，以及是否需要为表新建一个table heap
    * @param txn The transaction in which the table is being created
    * @param table_name The name of the new table, note that all tables beginning with `__` are reserved for the system.
    * @param schema The schema of the new table
@@ -189,6 +194,8 @@ class Catalog {
 
   /**
    * Create a new index, populate existing data of the table and return its metadata.
+   * 创建一个新索引，将现有数据建立索引并返回其元数据
+   * 输入创建索引的事务，索引名称，表名称，表的schema，索引的key，key的长度，哈希函数
    * @param txn The transaction in which the table is being created
    * @param index_name The name of the new index
    * @param table_name The name of the table
