@@ -24,6 +24,7 @@ namespace bustub {
 /**
  * ExecutorContext stores all the context necessary to run an executor.
  * ExecutorContext存储运行执行器所需的所有上下文。
+ * 所有要用到的系统资源，例如 Catalog，Buffer Pool 等，都由 ExecutorContext 提供。
  */
 class ExecutorContext {
  public:

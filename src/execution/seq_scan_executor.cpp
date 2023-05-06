@@ -16,10 +16,12 @@ namespace bustub {
 
 SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan)
     : AbstractExecutor(exec_ctx), plan_(plan) {
+  //根据ExecutorContext获得table_info_
   this->table_info_ = this->exec_ctx_->GetCatalog()->GetTable(plan_->table_oid_);
 }
 
 void SeqScanExecutor::Init() {
+  //初始时，先进行一些多版本并发控制的操作
   if (exec_ctx_->GetTransaction()->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
     try {
       bool is_locked = exec_ctx_->GetLockManager()->LockTable(
@@ -31,6 +33,7 @@ void SeqScanExecutor::Init() {
       throw ExecutionException("SeqScan Executor Get Table Lock Failed" + e.GetInfo());
     }
   }
+  //将table_iter_初始化为表的begin();
   this->table_iter_ = table_info_->table_->Begin(exec_ctx_->GetTransaction());
 }
 
@@ -38,6 +41,7 @@ void SeqScanExecutor::Init() {
 auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   do {
     if (table_iter_ == table_info_->table_->End()) {
+    //遍历到了结尾，进行多版本并发控制
       if (exec_ctx_->GetTransaction()->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
         const auto locked_row_set = exec_ctx_->GetTransaction()->GetSharedRowLockSet()->at(table_info_->oid_);
         table_oid_t oid = table_info_->oid_;
@@ -49,8 +53,10 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       }
       return false;
     }
+    //更新两个输入输出参数行对应的tuple指针和行rid
     *tuple = *table_iter_;
     *rid = tuple->GetRid();
+    //迭代器++；
     ++table_iter_;
   } while (plan_->filter_predicate_ != nullptr &&
            !plan_->filter_predicate_->Evaluate(tuple, table_info_->schema_).GetAs<bool>());
