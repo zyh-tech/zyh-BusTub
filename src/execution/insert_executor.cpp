@@ -19,6 +19,7 @@ namespace bustub {
 InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
     : AbstractExecutor(exec_ctx), plan_{plan}, child_executor_{std::move(child_executor)} {
+      //构造时通过exec_ctx_获得table_info_
   this->table_info_ = this->exec_ctx_->GetCatalog()->GetTable(plan_->table_oid_);
 }
 
@@ -33,7 +34,7 @@ void InsertExecutor::Init() {
   } catch (TransactionAbortException e) {
     throw ExecutionException("Insert Executor Get Table Lock Failed");
   }
-  //在执行器初始化期间，需要查找插入目标的表信息
+  //初始化时，通过exec_ctx_拿到表的索引
   table_indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 }
 
@@ -46,9 +47,11 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   int32_t insert_count = 0;
 
   while (child_executor_->Next(&to_insert_tuple, &emit_rid)) {
+    //递归调用child_executor_直到找到合适的插入位置
     bool inserted = table_info_->table_->InsertTuple(to_insert_tuple, rid, exec_ctx_->GetTransaction());
 
     if (inserted) {
+      //插入后进行多版本并发控制
       try {
         bool is_locked = exec_ctx_->GetLockManager()->LockRow(
             exec_ctx_->GetTransaction(), LockManager::LockMode::EXCLUSIVE, table_info_->oid_, *rid);

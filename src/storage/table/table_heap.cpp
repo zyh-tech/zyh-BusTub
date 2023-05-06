@@ -51,6 +51,7 @@ auto TableHeap::InsertTuple(const Tuple &tuple, RID *rid, Transaction *txn) -> b
   cur_page->WLatch();
 
   // Insert into the first page with enough space. If no such page exists, create a new page and insert into that.
+  // 在有足够空间的情况下插入第一页。如果不存在这样的页面，请创建一个新页面并插入其中。
   // INVARIANT: cur_page is WLatched if you leave the loop normally.
   while (!cur_page->InsertTuple(tuple, rid, txn, lock_manager_, log_manager_)) {
     auto next_page_id = cur_page->GetNextPageId();
@@ -64,6 +65,7 @@ auto TableHeap::InsertTuple(const Tuple &tuple, RID *rid, Transaction *txn) -> b
       cur_page = next_page;
     } else {
       // Otherwise we have run out of valid pages. We need to create a new page.
+      // 只有遍历完了所有的有效页，才需要创建一个页
       auto new_page = static_cast<TablePage *>(buffer_pool_manager_->NewPage(&next_page_id));
       // If we could not create a new page,
       if (new_page == nullptr) {

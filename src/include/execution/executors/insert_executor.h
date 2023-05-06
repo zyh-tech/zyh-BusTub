@@ -33,8 +33,8 @@ class InsertExecutor : public AbstractExecutor {
  public:
   /**
    * Construct a new InsertExecutor instance.
-   * @param exec_ctx The executor context
-   * @param plan The insert plan to be executed
+   * @param exec_ctx The executor context执行器所需的上下文（系统资源）
+   * @param plan The insert plan to be executed 通过成员 plan 来得知该如何进行本次计算
    * @param child_executor The child executor from which inserted tuples are pulled
    * @param child_executor 从中提取插入元组的子执行器
    */
