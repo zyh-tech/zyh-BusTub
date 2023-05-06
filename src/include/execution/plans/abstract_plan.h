@@ -99,6 +99,7 @@ class AbstractPlanNode {
   /**
    * The schema for the output of this plan node. In the volcano model, every plan node will spit out tuples,
    * and this tells you what schema this plan node's tuples will have.
+   * 此计划节点的输出的架构。在火山模型中，每个计划节点都会输出元组，这告诉这个计划节点的元组将具有什么模式。
    */
   SchemaRef output_schema_;
 
