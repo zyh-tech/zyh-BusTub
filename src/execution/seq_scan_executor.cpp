@@ -34,6 +34,7 @@ void SeqScanExecutor::Init() {
   this->table_iter_ = table_info_->table_->Begin(exec_ctx_->GetTransaction());
 }
 
+//依靠迭代器遍历即可
 auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   do {
     if (table_iter_ == table_info_->table_->End()) {

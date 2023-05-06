@@ -33,6 +33,7 @@ void InsertExecutor::Init() {
   } catch (TransactionAbortException e) {
     throw ExecutionException("Insert Executor Get Table Lock Failed");
   }
+  //在执行器初始化期间，需要查找插入目标的表信息
   table_indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 }
 
@@ -58,6 +59,7 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
         throw ExecutionException("Insert Executor Get Row Lock Failed");
       }
 
+      //需要更新插入元组的表的所有索引
       std::for_each(table_indexes_.begin(), table_indexes_.end(),
                     [&to_insert_tuple, &rid, &table_info = table_info_, &exec_ctx = exec_ctx_](IndexInfo *index) {
                       index->index_->InsertEntry(to_insert_tuple.KeyFromTuple(table_info->schema_, index->key_schema_,

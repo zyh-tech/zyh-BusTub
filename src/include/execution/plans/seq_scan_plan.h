@@ -26,6 +26,7 @@ namespace bustub {
 
 /**
  * The SeqScanPlanNode represents a sequential table scan operation.
+ * SeqScanPlanNode表示一种顺序表扫描操作。
  */
 class SeqScanPlanNode : public AbstractPlanNode {
  public:

@@ -24,8 +24,10 @@
 namespace bustub {
 
 /**
+ * 将元组插入到表中并更新索引
  * InsertExecutor executes an insert on a table.
  * Inserted values are always pulled from a child executor.
+ * 插入的值总是从子执行器中提取的。
  */
 class InsertExecutor : public AbstractExecutor {
  public:
@@ -34,6 +36,7 @@ class InsertExecutor : public AbstractExecutor {
    * @param exec_ctx The executor context
    * @param plan The insert plan to be executed
    * @param child_executor The child executor from which inserted tuples are pulled
+   * @param child_executor 从中提取插入元组的子执行器
    */
   InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *plan,
                  std::unique_ptr<AbstractExecutor> &&child_executor);

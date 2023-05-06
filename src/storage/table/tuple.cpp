@@ -6,6 +6,13 @@
 //
 // Identification: src/storage/table/tuple.cpp
 //
+/*
+tuple 对应数据表中的一行数据。每个 tuple 都由 RID 唯一标识。
+RID 由 page id + slot num 构成。tuple 由 value 组成，
+value 的个数和类型由 table info 中的 schema 指定。
+
+value 则是某个字段具体的值，value 本身还保存了类型信息。
+*/
 // Copyright (c) 2015-2019, Carnegie Mellon University Database Group
 //
 //===----------------------------------------------------------------------===//

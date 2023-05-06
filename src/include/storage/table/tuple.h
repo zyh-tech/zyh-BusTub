@@ -26,6 +26,7 @@ namespace bustub {
  * ---------------------------------------------------------------------
  * | FIXED-SIZE or VARIED-SIZED OFFSET | PAYLOAD OF VARIED-SIZED FIELD |
  * ---------------------------------------------------------------------
+ * 固定尺寸或可变尺寸偏移|可变尺寸场的有效载荷
  */
 class Tuple {
   friend class TablePage;

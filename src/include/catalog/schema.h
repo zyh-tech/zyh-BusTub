@@ -30,6 +30,7 @@ class Schema {
  public:
   /**
    * Constructs the schema corresponding to the vector of columns, read left-to-right.
+   * 构造与列的向量相对应的架构，从左到右读取。
    * @param columns columns that describe the schema's individual columns
    */
   explicit Schema(const std::vector<Column> &columns);
