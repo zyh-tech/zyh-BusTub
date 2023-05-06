@@ -19,6 +19,7 @@ IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanP
       index_info_{this->exec_ctx_->GetCatalog()->GetIndex(plan_->index_oid_)},
       table_info_{this->exec_ctx_->GetCatalog()->GetTable(index_info_->table_name_)},
       tree_{dynamic_cast<BPlusTreeIndexForOneIntegerColumn *>(index_info_->index_.get())},
+      //根据是否存在过滤谓词filter_predicate_，将iter_初始化为空还是树的begin
       iter_{plan_->filter_predicate_ != nullptr ? BPlusTreeIndexIteratorForOneIntegerColumn(nullptr, nullptr)
                                                 : tree_->GetBeginIterator()} {}
 
@@ -35,6 +36,7 @@ void IndexScanExecutor::Init() {
         throw ExecutionException("IndexScan Executor Get Table Lock Failed" + e.GetInfo());
       }
     }
+    //初始化，如果存在过滤谓词，将过滤后的迭代器放在rids中，之后next使用rids中的元素
     const auto *right_expr =
         dynamic_cast<const ConstantValueExpression *>(plan_->filter_predicate_->children_[1].get());
     Value v = right_expr->val_;
@@ -43,6 +45,8 @@ void IndexScanExecutor::Init() {
   }
 }
 
+//使用我们在 Project 2 中实现的 B+Tree Index Iterator，遍历 B+ 树叶子节点。
+//由于我们实现的是非聚簇索引，在叶子节点只能获取到 RID，需要拿着 RID 去 table 查询对应的 tuple。
 auto IndexScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if (plan_->filter_predicate_ != nullptr) {
     if (rid_iter_ != rids_.end()) {

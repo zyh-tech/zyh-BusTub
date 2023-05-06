@@ -26,6 +26,7 @@ class RID {
   RID() = default;
 
   /**
+   * 某一行数据的RID是通过页ID加上槽位置确定的
    * Creates a new Record Identifier for the given page identifier and slot number.
    * @param page_id page identifier
    * @param slot_num slot number
