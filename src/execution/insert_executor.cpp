@@ -38,6 +38,8 @@ void InsertExecutor::Init() {
   table_indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 }
 
+
+//执行器将生成一个整数元组作为输出，指示在插入所有行之后，表中插入了多少行
 auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   if (is_end_) {
     return false;

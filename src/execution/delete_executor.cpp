@@ -36,7 +36,9 @@ void DeleteExecutor::Init() {
   table_indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 }
 
+//您的删除执行器应该生成一个整数输出，该输出表示它从表中删除的行数
 auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
+  //删除和插入很像，
   if (is_end_) {
     return false;
   }
@@ -54,9 +56,11 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     } catch (TransactionAbortException e) {
       throw ExecutionException("Delete Executor Get Row Lock Failed");
     }
-
+    //Delete 时，并不是直接删除，而是将 tuple 标记为删除状态，也就是逻辑删除。
+    //（在事务提交后，再进行物理删除，Project 3 中无需实现）
     bool deleted = table_info_->table_->MarkDelete(emit_rid, exec_ctx_->GetTransaction());
 
+    //更新索引
     if (deleted) {
       std::for_each(table_indexes_.begin(), table_indexes_.end(),
                     [&to_delete_tuple, &rid, &table_info = table_info_, &exec_ctx = exec_ctx_](IndexInfo *index) {
