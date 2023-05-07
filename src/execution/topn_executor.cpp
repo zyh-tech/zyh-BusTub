@@ -7,6 +7,9 @@ TopNExecutor::TopNExecutor(ExecutorContext *exec_ctx, const TopNPlanNode *plan,
     : AbstractExecutor(exec_ctx), plan_{plan}, child_{std::move(child_executor)} {}
 
 void TopNExecutor::Init() {
+
+  //直接用 std::priority_queue 加自定义比较函数，然后在 Init() 中遍历下层算子所有 tuple，
+  //全部塞进优先队列后截取前 n 个。再 Next() 里一个一个输出
   child_->Init();
 
   auto cmp = [order_bys = plan_->order_bys_, schema = child_->GetOutputSchema()](const Tuple &a, const Tuple &b) {

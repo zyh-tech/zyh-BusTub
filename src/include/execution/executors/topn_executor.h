@@ -26,6 +26,7 @@ namespace bustub {
 
 /**
  * The TopNExecutor executor executes a topn.
+ * 仅需返回最大/最小的 n 个 tuple
  */
 class TopNExecutor : public AbstractExecutor {
  public:

@@ -58,6 +58,7 @@ class TopNPlanNode : public AbstractPlanNode {
 
   BUSTUB_PLAN_NODE_CLONE_WITH_CHILDREN(TopNPlanNode);
 
+  //order_bys_记录了多组排序的表达式子和排序规则
   std::vector<std::pair<OrderByType, AbstractExpressionRef>> order_bys_;
   std::size_t n_;
 
