@@ -27,6 +27,7 @@ namespace bustub {
 /**
  * The SortPlanNode represents a sort operation. It will sort the input with
  * the given predicate.
+ * SortPlanNode表示一种排序操作。它将使用给定的谓词对输入进行排序
  */
 class SortPlanNode : public AbstractPlanNode {
  public:
