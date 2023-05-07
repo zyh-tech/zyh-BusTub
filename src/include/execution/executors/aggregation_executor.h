@@ -48,6 +48,7 @@ class SimpleAggregationHashTable {
     for (const auto &agg_type : agg_types_) {
       switch (agg_type) {
         case AggregationType::CountStarAggregate:
+        //当对空表执行聚合时，CountStarAggregate应返回零，
           // Count start starts at zero.
           values.emplace_back(ValueFactory::GetIntegerValue(0));
           break;
@@ -55,7 +56,8 @@ class SimpleAggregationHashTable {
         case AggregationType::SumAggregate:
         case AggregationType::MinAggregate:
         case AggregationType::MaxAggregate:
-          // Others starts at null.
+
+          // Others starts at null.所有其他聚合类型应返回integer_ull
           values.emplace_back(ValueFactory::GetNullValueByType(TypeId::INTEGER));
           break;
       }
@@ -71,9 +73,11 @@ class SimpleAggregationHashTable {
    * @param input The input value
    */
   void CombineAggregateValues(AggregateValue *result, const AggregateValue &input) {
+    //注意处理null值
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
       switch (agg_types_[i]) {
         case AggregationType::CountStarAggregate:
+        //CountStarAggregate统计记录的个数，包含null值，其余聚合算子均不计算null值
           result->aggregates_[i] = result->aggregates_[i].Add(ValueFactory::GetIntegerValue(1));
           break;
         case AggregationType::CountAggregate:

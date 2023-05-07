@@ -35,11 +35,13 @@ void NestedLoopJoinExecutor::Init() {
   right_executor_->Init();
   Tuple tuple{};
   RID rid{};
+  //初始化时，将右边表每行取出来存在right_tuples_中
   while (right_executor_->Next(&tuple, &rid)) {
     right_tuples_.push_back(tuple);
   }
 }
 
+//Join 输出的 schema 为 left schema + right schema。
 auto NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   RID emit_rid{};
   while (right_tuple_idx_ >= 0 || left_executor_->Next(&left_tuple_, &emit_rid)) {
@@ -58,6 +60,7 @@ auto NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
         return true;
       }
     }
+    //LEFT JOIN 注意处理空值。
     if (right_tuple_idx_ == -1 && plan_->GetJoinType() == JoinType::LEFT) {
       for (uint32_t idx = 0; idx < left_executor_->GetOutputSchema().GetColumnCount(); idx++) {
         vals.push_back(left_tuple_.GetValue(&left_executor_->GetOutputSchema(), idx));

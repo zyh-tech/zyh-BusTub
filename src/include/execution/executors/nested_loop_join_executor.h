@@ -25,6 +25,7 @@ namespace bustub {
 
 /**
  * NestedLoopJoinExecutor executes a nested-loop JOIN on two tables.
+ * NestedLoopJoinExecutor在两个表上执行嵌套循环JOIN。
  */
 class NestedLoopJoinExecutor : public AbstractExecutor {
  public:
