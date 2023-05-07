@@ -23,11 +23,13 @@
 namespace bustub {
 /**
  * ColumnValueExpression maintains the tuple index and column index relative to a particular schema or join.
+ * 维护相对于特定架构或联接的元组索引和列索引
  */
 class ColumnValueExpression : public AbstractExpression {
  public:
   /**
    * ColumnValueExpression is an abstraction around "Table.member" in terms of indexes.
+   * 在索引方面，ColumnValueExpression是围绕“Table.member”的抽象。
    * @param tuple_idx {tuple index 0 = left side of join, tuple index 1 = right side of join}
    * @param col_idx the index of the column in the schema
    * @param ret_type the return type of the expression
@@ -54,7 +56,9 @@ class ColumnValueExpression : public AbstractExpression {
   BUSTUB_EXPR_CLONE_WITH_CHILDREN(ColumnValueExpression);
 
  private:
-  /** Tuple index 0 = left side of join, tuple index 1 = right side of join */
+  /** Tuple index 0 = left side of join, tuple index 1 = right side of join 
+   * 元组索引0=联接的左侧，元组索引1=联接的右侧
+  */
   uint32_t tuple_idx_;
   /** Column index refers to the index within the schema of the tuple, e.g. schema {A,B,C} has indexes {0,1,2} */
   uint32_t col_idx_;

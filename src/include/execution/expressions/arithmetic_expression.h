@@ -28,7 +28,9 @@
 
 namespace bustub {
 
-/** ArithmeticType represents the type of computation that we want to perform. */
+/** ArithmeticType represents the type of computation that we want to perform. 
+ * 算术类型包含加减
+*/
 enum class ArithmeticType { Plus, Minus };
 
 /**

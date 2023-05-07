@@ -85,7 +85,7 @@ class AbstractExpression {
       -> std::unique_ptr<AbstractExpression> = 0;
 
   /** The children of this expression. Note that the order of appearance of children may matter.
-   * 这个表达式的孩子们。注意，孩子的出现顺序可能很重要
+   * 这个表达式的孩子们(即操作数)。注意，孩子的出现顺序可能很重要
    */
   std::vector<AbstractExpressionRef> children_;
 

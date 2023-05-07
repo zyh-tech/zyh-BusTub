@@ -66,8 +66,12 @@ Bustub 采用 Top-to-Bottom。
 所有要用到的系统资源，例如 Catalog，Buffer Pool 等，都由 ExecutorContext 提供。
 
 
+## AbstractExpression
+AbstractExpression 抽象了 sql 中的各种表达式，包括 ArithmeticExpression、ColumnValueExpression、ComparisonExpression、ConstantValueExpression 和 LogicExpression
 
+AbstractExpression 就是表达式树的节点。sql 中的所有表达式都会被 parse 为表达式树，在 Binder 中进行绑定。AbstractExpression 里最重要的方法就是 Evaluate()，返回值是 value。调用 Evaluate()，参数为 tuple 和 tuple 对应的 schema，返回从这个 tuple 中提取数据后代入表达式计算得到的结果。
 
+在 NestedLoopJoin 里，我们要用到的是 EvaluateJoin()，也差不多，只不过输入的是左右两个 tuple 和 schema。返回值是表示 true 或 false 的 value。true 则代表成功匹配。Join 输出的 schema 为 left schema + right schema。
 
 # Bustub 中 table 架构。
 ![alt 属性文本](https://pic3.zhimg.com/80/v2-9bc6214441f8ca37004ff1389114a692_1440w.webp)

@@ -28,11 +28,14 @@
 
 namespace bustub {
 
-/** ArithmeticType represents the type of logic operation that we want to perform. */
+/** ArithmeticType represents the type of logic operation that we want to perform.
+ * ArithmeticType表示我们要执行的逻辑运算的类型，包含与和或
+ */
 enum class LogicType { And, Or };
 
 /**
  * LogicExpression represents two expressions being computed.
+ * LogicExpression表示正在计算的两个表达式。
  */
 class LogicExpression : public AbstractExpression {
  public:
