@@ -9,6 +9,7 @@
 #include "planner/planner.h"
 
 namespace bustub {
+  //将字符串运算转换为实际运算计划
 // NOLINTNEXTLINE - weird error on clang-tidy.
 auto Planner::GetAggCallFromFactory(const std::string &func_name, std::vector<AbstractExpressionRef> args)
     -> std::tuple<AggregationType, std::vector<AbstractExpressionRef>> {

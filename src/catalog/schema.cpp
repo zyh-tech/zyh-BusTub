@@ -34,6 +34,7 @@ Schema::Schema(const std::vector<Column> &columns) {
     // add column
     this->columns_.push_back(column);
   }
+  //tuple的长度为总最后一个列的偏移+最后一个列的长度
   // set tuple length
   length_ = curr_offset;
 }

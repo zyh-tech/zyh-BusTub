@@ -165,6 +165,8 @@ class Planner {
   /** If any function needs to modify the scope, it MUST hold the context guard, so that
    * the context will be recovered after the function returns. Currently, it's used in
    * `BindFrom` and `BindJoin`.
+   * 如果任何函数需要修改作用域，它必须保持上下文保护，以便在函数返回后恢复上下文。
+   * 目前，它在“BindFrom”和“BindJoin”中使用。
    */
   auto NewContext() -> ContextGuard { return ContextGuard(&ctx_); }
 
