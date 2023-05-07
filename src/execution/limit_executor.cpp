@@ -23,6 +23,9 @@ void LimitExecutor::Init() {
   count_ = 0;
 }
 
+
+//和 SeqScan 基本一模一样，只不过在内部维护一个 count，记录已经 emit 了多少 tuple。
+//当下层算子空了或 count 达到规定上限后，不再返回新的 tuple。
 auto LimitExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if (count_ >= plan_->GetLimit()) {
     return false;
