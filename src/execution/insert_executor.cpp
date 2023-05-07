@@ -64,9 +64,10 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
         throw ExecutionException("Insert Executor Get Row Lock Failed");
       }
 
-      //需要更新插入元组的表的所有索引
+      //需要更新插入元组的表的所有索引，table_indexes_中存放了表中的所有索引
       std::for_each(table_indexes_.begin(), table_indexes_.end(),
                     [&to_insert_tuple, &rid, &table_info = table_info_, &exec_ctx = exec_ctx_](IndexInfo *index) {
+                      //拿到需要插入的tuple，和rid以及表的索引信息，执行索引插入
                       index->index_->InsertEntry(to_insert_tuple.KeyFromTuple(table_info->schema_, index->key_schema_,
                                                                               index->index_->GetKeyAttrs()),
                                                  *rid, exec_ctx->GetTransaction());
