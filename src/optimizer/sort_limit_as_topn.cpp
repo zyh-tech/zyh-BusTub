@@ -4,14 +4,19 @@
 #include "optimizer/optimizer.h"
 
 namespace bustub {
-
+//能优化为一个 TopN 算子的形式是，上层节点为 Limit，下层节点为 Sort，不能反过来。
 auto Optimizer::OptimizeSortLimitAsTopN(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef {
   // TODO(student): implement sort + limit -> top N optimizer rule
+
+  //同样，我们对 plan tree 进行后续遍历，
   std::vector<AbstractPlanNodeRef> children;
   for (const auto &child : plan->GetChildren()) {
     children.emplace_back(OptimizeSortLimitAsTopN(child));
   }
   auto optimized_plan = plan->CloneWithChildren(std::move(children));
+
+  
+  //在遇到 Limit 时，判断其下层节点是否为 Sort，若为 Sort，则将这两个节点替换为一个 TopN。
 
   if (optimized_plan->GetType() == PlanType::Limit) {
     const auto &limit_plan = dynamic_cast<const LimitPlanNode &>(*optimized_plan);

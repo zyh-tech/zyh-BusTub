@@ -32,6 +32,8 @@ auto Optimizer::MatchIndex(const std::string &table_name, uint32_t index_key_idx
   return std::nullopt;
 }
 
+//可以看到，实际上就是对 plan tree 进行后序遍历，自底向上地适用规则，改写节点。
+//遍历到某个节点时，通过 if 语句来判断当前节点的类型是否符合我们要优化的类型，若符合则进行优化。
 auto Optimizer::OptimizeNLJAsIndexJoin(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef {
   std::vector<AbstractPlanNodeRef> children;
   for (const auto &child : plan->GetChildren()) {
