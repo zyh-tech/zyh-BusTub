@@ -47,7 +47,9 @@ class NestedIndexJoinPlanNode : public AbstractPlanNode {
 
   auto GetType() const -> PlanType override { return PlanType::NestedIndexJoin; }
 
-  /** @return the predicate to be used to extract the join key from the child */
+  /** @return the predicate to be used to extract the join key from the child 
+   * 返回用于从子级提取联接键的谓词
+  */
   auto KeyPredicate() const -> const AbstractExpressionRef & { return key_predicate_; }
 
   /** @return The join type used in the nested index join */

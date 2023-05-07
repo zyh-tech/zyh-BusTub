@@ -33,6 +33,7 @@ namespace bustub {
 class NestIndexJoinExecutor : public AbstractExecutor {
  public:
   /**
+   * 如果查询包含具有相等条件的联接，并且联接的右侧具有对该条件的索引，则DBMS将使用NestedIndexJoinPlanNode。
    * Creates a new nested index join executor.
    * @param exec_ctx the context that the hash join should be performed in
    * @param plan the nested index join plan node

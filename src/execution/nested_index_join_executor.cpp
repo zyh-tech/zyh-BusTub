@@ -31,6 +31,9 @@ NestIndexJoinExecutor::NestIndexJoinExecutor(ExecutorContext *exec_ctx, const Ne
 
 void NestIndexJoinExecutor::Init() { child_->Init(); }
 
+//具体实现和 NestedLoopJoin 差不多，只是在尝试匹配右表 tuple 时，
+//会拿 join key 去 B+Tree Index 里进行查询。如果查询到结果，就拿着查到的 RID 去右表获取 tuple 
+//然后装配成结果输出。
 auto NestIndexJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   Tuple left_tuple{};
   RID emit_rid{};
@@ -38,6 +41,8 @@ auto NestIndexJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   while (child_->Next(&left_tuple, &emit_rid)) {
     Value value = plan_->KeyPredicate()->Evaluate(&left_tuple, child_->GetOutputSchema());
     std::vector<RID> rids;
+
+    //根据左表值遍历得到右表对应的key
     tree_->ScanKey(Tuple{{value}, index_info_->index_->GetKeySchema()}, &rids, exec_ctx_->GetTransaction());
 
     Tuple right_tuple{};

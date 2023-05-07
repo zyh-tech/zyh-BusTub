@@ -32,6 +32,7 @@ namespace bustub {
 enum class ArithmeticType { Plus, Minus };
 
 /**
+ * ArithmeticExpression表示正在计算的两个表达式，目前只支持整数
  * ArithmeticExpression represents two expressions being computed, ONLY SUPPORT INTEGER FOR NOW.
  */
 class ArithmeticExpression : public AbstractExpression {
@@ -48,6 +49,7 @@ class ArithmeticExpression : public AbstractExpression {
     Value lhs = GetChildAt(0)->Evaluate(tuple, schema);
     Value rhs = GetChildAt(1)->Evaluate(tuple, schema);
     auto res = PerformComputation(lhs, rhs);
+    //注意处理null值
     if (res == std::nullopt) {
       return ValueFactory::GetNullValueByType(TypeId::INTEGER);
     }

@@ -37,6 +37,7 @@ using AbstractExpressionRef = std::shared_ptr<AbstractExpression>;
 /**
  * AbstractExpression is the base class of all the expressions in the system.
  * Expressions are modeled as trees, i.e. every expression may have a variable number of children.
+ * 表达式被建模为树，即每个表达式可能有不同数量的子表达式
  */
 class AbstractExpression {
  public:
@@ -51,7 +52,9 @@ class AbstractExpression {
   /** Virtual destructor. */
   virtual ~AbstractExpression() = default;
 
-  /** @return The value obtained by evaluating the tuple with the given schema */
+  /** @return The value obtained by evaluating the tuple with the given schema 
+   * return通过使用给定的架构对元组求值获得的值
+  */
   virtual auto Evaluate(const Tuple *tuple, const Schema &schema) const -> Value = 0;
 
   /**
