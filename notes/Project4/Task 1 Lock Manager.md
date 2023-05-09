@@ -95,3 +95,25 @@ granted 和 waiting 的锁请求均放在同一个队列里，我们需要遍历
 另外，需要进行一些 Bookkeeping 操作。Transaction 中需要维护许多集合，分别记录了 Transaction 当前持有的各种类型的锁。方便在事务提交或终止后全部释放。
 
 Lock 的流程大致如此，row lock 与 table lock 几乎相同，仅多了一个检查步骤。在接收到 row lock 请求后，需要检查是否持有 row 对应的 table lock。必须先持有 table lock 再持有 row lock。
+
+
+
+## UnLock过程
+
+仍以 table lock 为例。Unlock 的流程比 Lock 要简单不少。
+首先，由于是 table lock，在释放时需要先检查其下的所有 row lock 是否已经释放。
+接下来是 table lock 和 row lock 的公共步骤：
+第一步，获取对应的 lock request queue。
+第二步，遍历请求队列，找到 unlock 对应的 granted 请求。
+若不存在对应的请求，抛 ATTEMPTED_UNLOCK_BUT_NO_LOCK_HELD 异常。
+找到对应的请求后，根据事务的隔离级别和锁类型修改其状态。
+
+当隔离级别为 REPEATABLE_READ 时，S/X 锁释放会使事务进入 Shrinking 状态。当为 READ_COMMITTED 时，只有 X 锁释放使事务进入 Shrinking 状态。当为 READ_UNCOMMITTED 时，X 锁释放使事务 Shrinking，S 锁不会出现。
+
+之后，在请求队列中 remove unlock 对应的请求，并将请求 delete。
+
+同样，需要进行 Bookkeeping。
+
+在锁成功释放后，调用 cv_.notify_all() 唤醒所有阻塞在此 table 上的事务，检查能够获取锁。
+
+Task 1 的内容就是这样，核心是条件变量阻塞模型，此外细枝末节还是挺多的，需要细心维护。
