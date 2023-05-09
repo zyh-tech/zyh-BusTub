@@ -29,7 +29,8 @@ namespace bustub {
 
 /**
  * Transaction states for 2PL:
- *
+ * 2PL 保证正确性的方式是通过获得锁的顺序实现的，
+ * 也就说我们没办法强制要求事务按照某个 serial schedule 并发，只能保证最终结果是正确的。
  *     _________________________
  *    |                         v
  * GROWING -> SHRINKING -> COMMITTED   ABORTED

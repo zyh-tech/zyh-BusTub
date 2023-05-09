@@ -19,18 +19,23 @@
 namespace bustub {
 
 auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oid_t &oid) -> bool {
+
+
   if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED) {
+    //READ_UNCOMMITTE 隔离级别中只允许使用X和IX锁
     if (lock_mode == LockMode::SHARED || lock_mode == LockMode::INTENTION_SHARED ||
         lock_mode == LockMode::SHARED_INTENTION_EXCLUSIVE) {
       txn->SetState(TransactionState::ABORTED);
       throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_SHARED_ON_READ_UNCOMMITTED);
     }
+    //
     if (txn->GetState() == TransactionState::SHRINKING &&
         (lock_mode == LockMode::EXCLUSIVE || lock_mode == LockMode::INTENTION_EXCLUSIVE)) {
       txn->SetState(TransactionState::ABORTED);
       throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
     }
   }
+
   if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
     if (txn->GetState() == TransactionState::SHRINKING && lock_mode != LockMode::INTENTION_SHARED &&
         lock_mode != LockMode::SHARED) {
@@ -38,6 +43,7 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
       throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
     }
   }
+
   if (txn->GetIsolationLevel() == IsolationLevel::REPEATABLE_READ) {
     if (txn->GetState() == TransactionState::SHRINKING) {
       txn->SetState(TransactionState::ABORTED);
@@ -189,6 +195,8 @@ auto LockManager::UnlockTable(Transaction *txn, const table_oid_t &oid) -> bool 
   txn->SetState(TransactionState::ABORTED);
   throw bustub::TransactionAbortException(txn->GetTransactionId(), AbortReason::ATTEMPTED_UNLOCK_BUT_NO_LOCK_HELD);
 }
+
+
 
 auto LockManager::LockRow(Transaction *txn, LockMode lock_mode, const table_oid_t &oid, const RID &rid) -> bool {
   if (lock_mode == LockMode::INTENTION_EXCLUSIVE || lock_mode == LockMode::INTENTION_SHARED ||
