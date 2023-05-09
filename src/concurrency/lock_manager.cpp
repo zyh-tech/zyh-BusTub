@@ -22,13 +22,13 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
 
 
   if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED) {
-    //READ_UNCOMMITTE 隔离级别中只允许使用X和IX锁
+    //READ_UNCOMMITTE 隔离级别中只允许使用X和IX锁(即只加写锁)
     if (lock_mode == LockMode::SHARED || lock_mode == LockMode::INTENTION_SHARED ||
         lock_mode == LockMode::SHARED_INTENTION_EXCLUSIVE) {
       txn->SetState(TransactionState::ABORTED);
       throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_SHARED_ON_READ_UNCOMMITTED);
     }
-    //
+    //READ_UNCOMMITTE 隔离级别下收缩状态下不允许获得X和IX锁（写锁）
     if (txn->GetState() == TransactionState::SHRINKING &&
         (lock_mode == LockMode::EXCLUSIVE || lock_mode == LockMode::INTENTION_EXCLUSIVE)) {
       txn->SetState(TransactionState::ABORTED);
@@ -36,7 +36,9 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
     }
   }
 
+
   if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
+    //READ_COMMITTED 隔离级别在收缩状态下只允许使用IS、S锁（即读锁）
     if (txn->GetState() == TransactionState::SHRINKING && lock_mode != LockMode::INTENTION_SHARED &&
         lock_mode != LockMode::SHARED) {
       txn->SetState(TransactionState::ABORTED);
@@ -44,33 +46,47 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
     }
   }
 
+
   if (txn->GetIsolationLevel() == IsolationLevel::REPEATABLE_READ) {
+    //REPEATABLE_READ 隔离级别在收缩状态下不允许使用锁 
     if (txn->GetState() == TransactionState::SHRINKING) {
       txn->SetState(TransactionState::ABORTED);
       throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
     }
   }
+  //从 table_lock_map_ 中获取 table 对应的 lock request queue。注意需要对 map 加锁
   table_lock_map_latch_.lock();
   if (table_lock_map_.find(oid) == table_lock_map_.end()) {
+    //若 queue 不存在则创建。
     table_lock_map_.emplace(oid, std::make_shared<LockRequestQueue>());
   }
   auto lock_request_queue = table_lock_map_.find(oid)->second;
   lock_request_queue->latch_.lock();
+  //并且为了提高并发性，在获取到 queue 之后立即释放 map 的锁。
   table_lock_map_latch_.unlock();
 
   for (auto request : lock_request_queue->request_queue_) {  // NOLINT
+   //需要遍历队列查看有没有与当前事务 id（我习惯叫做 tid）相同的请求。
+     //如果存在这样的请求，则代表当前事务在此前已经得到了在此资源上的一把锁，接下来可能需要锁升级
     if (request->txn_id_ == txn->GetTransactionId()) {
+
+     //现在我们找到了此前已经获取的锁，开始尝试锁升级。首先，判断此前授予锁类型是否与当前请求锁类型相同。
+     //若相同，则代表是一次重复的请求，直接返回。否则进行下一步检查。
       if (request->lock_mode_ == lock_mode) {
         lock_request_queue->latch_.unlock();
         return true;
       }
 
+      //判断当前资源上是否有另一个事务正在尝试升级（queue->upgrading_ == INVALID_TXN_ID）。
+      //若有，则终止当前事务，抛出 UPGRADE_CONFLICT 异常。因为不允许多个事务在同一资源上同时尝试锁升级。
       if (lock_request_queue->upgrading_ != INVALID_TXN_ID) {
         lock_request_queue->latch_.unlock();
         txn->SetState(TransactionState::ABORTED);
         throw TransactionAbortException(txn->GetTransactionId(), AbortReason::UPGRADE_CONFLICT);
       }
 
+      //判断升级锁的类型和之前锁是否兼容，不能反向升级。
+      //允许的升级规则IS -> [S, X, IX, SIX] ，S -> [X, SIX]， IX -> [X, SIX]， SIX -> [X]
       if (!(request->lock_mode_ == LockMode::INTENTION_SHARED &&
             (lock_mode == LockMode::SHARED || lock_mode == LockMode::EXCLUSIVE ||
              lock_mode == LockMode::INTENTION_EXCLUSIVE || lock_mode == LockMode::SHARED_INTENTION_EXCLUSIVE)) &&
@@ -84,6 +100,10 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
         throw TransactionAbortException(txn->GetTransactionId(), AbortReason::INCOMPATIBLE_UPGRADE);
       }
 
+
+      //现在，我们终于可以进行锁升级了
+
+      //释放当前已经持有的锁，包括lock_manager中的锁记录和事务中的锁记录
       lock_request_queue->request_queue_.remove(request);
       InsertOrDeleteTableLockSet(txn, request, false);
 
@@ -96,11 +116,25 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
           break;
         }
       }
+      //把升级的锁作为一个新的请求加入队列，插入的位置是当前第一个没有被授予的锁的位置
+      //这里插入的位置是根据优先级规则来确定的
+      //如果队列中存在锁升级请求，若锁升级请求正为当前请求，则优先级最高。
+      //否则代表其他事务正在尝试锁升级，优先级高于当前请求。若队列中不存在锁升级请求，则遍历队列。
+      //如果，当前请求是第一个 waiting 状态的请求，则代表优先级最高。
+      //如果当前请求前面还存在其他 waiting 请求，则要判断当前请求是否前面的 waiting 请求兼容。
+      //若兼容，则仍可以视为优先级最高。若存在不兼容的请求，则优先级不为最高。
       lock_request_queue->request_queue_.insert(lr_iter, upgrade_lock_request);
+      //并在 queue 中标记当前事务正在尝试升级
       lock_request_queue->upgrading_ = txn->GetTransactionId();
 
+      // std::adopt_lock用于使作用域锁取得锁定互斥对象所有权的标记
       std::unique_lock<std::mutex> lock(lock_request_queue->latch_, std::adopt_lock);
+
+      //等待直到新锁被授予。
       while (!GrantLock(upgrade_lock_request, lock_request_queue)) {
+        //在 GrantLock() 中，Lock Manager 会判断是否可以满足当前锁请求。若可以满足，则返回 true，事务成功获取锁，并退出循环。
+        //若不能满足，则返回 false，事务暂时无法获取锁，在 wait 处阻塞，
+        //等待资源状态变化时被唤醒并再次判断是否能够获取锁。资源状态变化指的是什么？其他事务释放了锁。
         lock_request_queue->cv_.wait(lock);
         if (txn->GetState() == TransactionState::ABORTED) {
           lock_request_queue->upgrading_ = INVALID_TXN_ID;
@@ -110,7 +144,10 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
         }
       }
 
+      //升级结束后取消升级标记
       lock_request_queue->upgrading_ = INVALID_TXN_ID;
+
+      //更新锁的记录
       upgrade_lock_request->granted_ = true;
       InsertOrDeleteTableLockSet(txn, upgrade_lock_request, true);
 
@@ -197,7 +234,8 @@ auto LockManager::UnlockTable(Transaction *txn, const table_oid_t &oid) -> bool 
 }
 
 
-
+//row lock 与 table lock 几乎相同，仅多了一个检查步骤。
+//在接收到 row lock 请求后，需要检查是否持有 row 对应的 table lock。必须先持有 table lock 再持有 row lock。
 auto LockManager::LockRow(Transaction *txn, LockMode lock_mode, const table_oid_t &oid, const RID &rid) -> bool {
   if (lock_mode == LockMode::INTENTION_EXCLUSIVE || lock_mode == LockMode::INTENTION_SHARED ||
       lock_mode == LockMode::SHARED_INTENTION_EXCLUSIVE) {
@@ -492,8 +530,11 @@ void LockManager::RunCycleDetection() {
   }
 }
 
+//判断锁请求lock_request是否可被授予
 auto LockManager::GrantLock(const std::shared_ptr<LockRequest> &lock_request,
                             const std::shared_ptr<LockRequestQueue> &lock_request_queue) -> bool {
+  //依次判断lock_request_queue中已经授予的锁是否和当前向获取的锁冲突，当全部不冲突才返回true
+  //只要队列中有任意一个granted的锁与当前请求的锁冲突，则false
   for (auto &lr : lock_request_queue->request_queue_) {
     if (lr->granted_) {
       switch (lock_request->lock_mode_) {
