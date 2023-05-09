@@ -158,6 +158,7 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
     }
   }
 
+  //如果锁不需要升级，则将锁请求加入request_queue_
   auto lock_request = std::make_shared<LockRequest>(txn->GetTransactionId(), lock_mode, oid);
   lock_request_queue->request_queue_.push_back(lock_request);
 
@@ -181,15 +182,19 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
   return true;
 }
 
+
+
 auto LockManager::UnlockTable(Transaction *txn, const table_oid_t &oid) -> bool {
   table_lock_map_latch_.lock();
 
+  //首先要确保当前事务中持有该表的锁
   if (table_lock_map_.find(oid) == table_lock_map_.end()) {
     table_lock_map_latch_.unlock();
     txn->SetState(TransactionState::ABORTED);
     throw bustub::TransactionAbortException(txn->GetTransactionId(), AbortReason::ATTEMPTED_UNLOCK_BUT_NO_LOCK_HELD);
   }
 
+  //由于是 table lock，在释放时需要先检查其下的所有 row lock 是否已经释放。
   auto s_row_lock_set = txn->GetSharedRowLockSet();
   auto x_row_lock_set = txn->GetExclusiveRowLockSet();
 
@@ -200,18 +205,25 @@ auto LockManager::UnlockTable(Transaction *txn, const table_oid_t &oid) -> bool 
     throw bustub::TransactionAbortException(txn->GetTransactionId(), AbortReason::TABLE_UNLOCKED_BEFORE_UNLOCKING_ROWS);
   }
 
+  //获取对应的 lock request queue。
   auto lock_request_queue = table_lock_map_[oid];
 
   lock_request_queue->latch_.lock();
   table_lock_map_latch_.unlock();
 
+  //遍历请求队列，找到 unlock 对应的 granted 请求
   for (auto lock_request : lock_request_queue->request_queue_) {  // NOLINT
     if (lock_request->txn_id_ == txn->GetTransactionId() && lock_request->granted_) {
       lock_request_queue->request_queue_.remove(lock_request);
 
+      //在锁成功释放后，调用 cv_.notify_all() 唤醒所有阻塞在此 table 上的事务，检查能够获取锁。
       lock_request_queue->cv_.notify_all();
       lock_request_queue->latch_.unlock();
 
+      //找到对应的请求后，根据事务的隔离级别和锁类型修改其状态。
+      //当隔离级别为 REPEATABLE_READ 时，S/X 锁释放会使事务进入 Shrinking 状态。
+      //当为 READ_COMMITTED 时，只有 X 锁释放使事务进入 Shrinking 状态。
+      //当为 READ_UNCOMMITTED 时，X 锁释放使事务 Shrinking，S 锁不会出现。
       if ((txn->GetIsolationLevel() == IsolationLevel::REPEATABLE_READ &&
            (lock_request->lock_mode_ == LockMode::SHARED || lock_request->lock_mode_ == LockMode::EXCLUSIVE)) ||
           (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED &&
@@ -227,8 +239,9 @@ auto LockManager::UnlockTable(Transaction *txn, const table_oid_t &oid) -> bool 
       return true;
     }
   }
-
   lock_request_queue->latch_.unlock();
+
+  //若不存在对应的请求，抛 ATTEMPTED_UNLOCK_BUT_NO_LOCK_HELD 异常。
   txn->SetState(TransactionState::ABORTED);
   throw bustub::TransactionAbortException(txn->GetTransactionId(), AbortReason::ATTEMPTED_UNLOCK_BUT_NO_LOCK_HELD);
 }
@@ -573,6 +586,7 @@ auto LockManager::GrantLock(const std::shared_ptr<LockRequest> &lock_request,
   return false;
 }
 
+//根据锁的类型将锁 加入/删除 事务对应的锁集合中
 void LockManager::InsertOrDeleteTableLockSet(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request,
                                              bool insert) {
   switch (lock_request->lock_mode_) {

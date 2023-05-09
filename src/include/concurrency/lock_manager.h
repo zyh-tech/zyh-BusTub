@@ -217,6 +217,11 @@ class LockManager {
    * [UNLOCK_NOTE]
    *
    * GENERAL BEHAVIOUR:
+   * 一般行为：
+   * UnlockTable（）和UnlockRow（）都应该释放对资源的锁定并返回。
+   * 两者都应确保事务当前对其试图解锁的资源持有锁定。
+   * 如果没有，LockManager应将TransactionState设置为ABORTED并抛出
+   * 事务中止异常（ATTEMPTED_UNLOCK_BUT_NO_LOCK_HELD）
    *    Both UnlockTable() and UnlockRow() should release the lock on the resource and return.
    *    Both should ensure that the transaction currently holds a lock on the resource it is attempting to unlock.
    *    If not, LockManager should set the TransactionState as ABORTED and throw
@@ -225,24 +230,46 @@ class LockManager {
    *    Additionally, unlocking a table should only be allowed if the transaction does not hold locks on any
    *    row on that table. If the transaction holds locks on rows of the table, Unlock should set the Transaction State
    *    as ABORTED and throw a TransactionAbortException (TABLE_UNLOCKED_BEFORE_UNLOCKING_ROWS).
+   *    此外，只有当事务没有锁定表上的任何行时，才允许解锁该表。
+   *    如果事务在表的行上持有锁，Unlock应将transaction State设置为ABORTED，并引发TransactionAbortException（table_UNLOCKED_BEFORE_UNLOCKING_rows）。
    *
    *    Finally, unlocking a resource should also grant any new lock requests for the resource (if possible).
-   *
-   * TRANSACTION STATE UPDATE
-   *    Unlock should update the transaction state appropriately (depending upon the ISOLATION LEVEL)
-   *    Only unlocking S or X locks changes transaction state.
-   *
-   *    REPEATABLE_READ:
-   *        Unlocking S/X locks should set the transaction state to SHRINKING
-   *
-   *    READ_COMMITTED:
-   *        Unlocking X locks should set the transaction state to SHRINKING.
-   *        Unlocking S locks does not affect transaction state.
-   *
-   *   READ_UNCOMMITTED:
-   *        Unlocking X locks should set the transaction state to SHRINKING.
-   *        S locks are not permitted under READ_UNCOMMITTED.
-   *            The behaviour upon unlocking an S lock under this isolation level is undefined.
+   *    最后，解锁资源也应该允许对该资源的任何新的锁定请求（如果可能的话）。
+   * 
+    * TRANSACTION STATE UPDATE
+    *    Unlock should update the transaction state appropriately (depending upon the ISOLATION LEVEL)
+    *    Only unlocking S or X locks changes transaction state.
+    *
+    *    REPEATABLE_READ:
+    *        Unlocking S/X locks should set the transaction state to SHRINKING
+    *
+    *    READ_COMMITTED:
+    *        Unlocking X locks should set the transaction state to SHRINKING.
+    *        Unlocking S locks does not affect transaction state.
+    *
+    *   READ_UNCOMMITTED:
+    *        Unlocking X locks should set the transaction state to SHRINKING.
+    *        S locks are not permitted under READ_UNCOMMITTED.
+    *            The behaviour upon unlocking an S lock under this isolation level is undefined.
+    * 
+    * *事务状态更新
+      *解锁应适当更新事务状态（取决于隔离级别）
+      *只有解锁S或X锁才能更改事务状态。
+
+      *
+      *可重复读取（_READ）：
+      *解锁S/X锁应将事务状态设置为收缩
+
+      *
+      *已提交读取（_co）：
+      *解锁X锁应将事务状态设置为SHRINKING。
+      *解锁S锁不会影响事务状态。
+
+      *
+      *读取未提交（_U）：
+      *解锁X锁应将事务状态设置为SHRINKING。
+      *在READ_UNCOMITTED下不允许使用S锁。
+      *在此隔离级别下解锁S锁时的行为是未定义的。
    *
    *
    * BOOK KEEPING:
