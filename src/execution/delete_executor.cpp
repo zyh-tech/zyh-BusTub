@@ -25,6 +25,7 @@ DeleteExecutor::DeleteExecutor(ExecutorContext *exec_ctx, const DeletePlanNode *
 void DeleteExecutor::Init() {
   child_executor_->Init();
   try {
+    //为表加上 IX 锁
     bool is_locked = exec_ctx_->GetLockManager()->LockTable(
         exec_ctx_->GetTransaction(), LockManager::LockMode::INTENTION_EXCLUSIVE, table_info_->oid_);
     if (!is_locked) {
@@ -36,7 +37,7 @@ void DeleteExecutor::Init() {
   table_indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 }
 
-//您的删除执行器应该生成一个整数输出，该输出表示它从表中删除的行数
+
 auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   //删除和插入很像，
   if (is_end_) {
@@ -45,9 +46,11 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   Tuple to_delete_tuple{};
   RID emit_rid;
   int32_t delete_count = 0;
-
+  
+  
   while (child_executor_->Next(&to_delete_tuple, &emit_rid)) {
     try {
+      //再为行加 X 锁
       bool is_locked = exec_ctx_->GetLockManager()->LockRow(
           exec_ctx_->GetTransaction(), LockManager::LockMode::EXCLUSIVE, table_info_->oid_, emit_rid);
       if (!is_locked) {

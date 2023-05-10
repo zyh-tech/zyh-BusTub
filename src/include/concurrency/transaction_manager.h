@@ -86,6 +86,7 @@ class TransactionManager {
  private:
   /**
    * Releases all the locks held by the given transaction.
+   * 释放给定事务所持有的所有锁。 
    * @param txn the transaction whose locks should be released
    */
   void ReleaseLocks(Transaction *txn) {

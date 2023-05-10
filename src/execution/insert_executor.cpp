@@ -26,6 +26,7 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
 void InsertExecutor::Init() {
   child_executor_->Init();
   try {
+    //为表加上 IX 锁，
     bool is_locked = exec_ctx_->GetLockManager()->LockTable(
         exec_ctx_->GetTransaction(), LockManager::LockMode::INTENTION_EXCLUSIVE, table_info_->oid_);
     if (!is_locked) {
@@ -53,8 +54,9 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     bool inserted = table_info_->table_->InsertTuple(to_insert_tuple, rid, exec_ctx_->GetTransaction());
 
     if (inserted) {
-      //插入后进行多版本并发控制
+      //可插入时进行多版本并发控制
       try {
+        //再为行加 X 锁
         bool is_locked = exec_ctx_->GetLockManager()->LockRow(
             exec_ctx_->GetTransaction(), LockManager::LockMode::EXCLUSIVE, table_info_->oid_, *rid);
         if (!is_locked) {
