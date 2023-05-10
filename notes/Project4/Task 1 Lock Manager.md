@@ -101,11 +101,17 @@ Lock 的流程大致如此，row lock 与 table lock 几乎相同，仅多了一
 ## UnLock过程
 
 仍以 table lock 为例。Unlock 的流程比 Lock 要简单不少。
+
 首先，由于是 table lock，在释放时需要先检查其下的所有 row lock 是否已经释放。
+
 接下来是 table lock 和 row lock 的公共步骤：
+
 第一步，获取对应的 lock request queue。
+
 第二步，遍历请求队列，找到 unlock 对应的 granted 请求。
+
 若不存在对应的请求，抛 ATTEMPTED_UNLOCK_BUT_NO_LOCK_HELD 异常。
+
 找到对应的请求后，根据事务的隔离级别和锁类型修改其状态。
 
 当隔离级别为 REPEATABLE_READ 时，S/X 锁释放会使事务进入 Shrinking 状态。当为 READ_COMMITTED 时，只有 X 锁释放使事务进入 Shrinking 状态。当为 READ_UNCOMMITTED 时，X 锁释放使事务 Shrinking，S 锁不会出现。

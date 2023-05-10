@@ -399,10 +399,13 @@ class LockManager {
     row_lock_set->second.erase(rid);
   }
 
+  //从txn_id进行DFS检测wait-for图是否存在环
   auto Dfs(txn_id_t txn_id) -> bool {
+    //txn_id已经遍历过，知道是安全的，则直接返回false
     if (safe_set_.find(txn_id) != safe_set_.end()) {
       return false;
     }
+    //否则将其加入到active_set_参与后续检测
     active_set_.insert(txn_id);
 
     std::vector<txn_id_t> &next_node_vector = waits_for_[txn_id];
@@ -441,6 +444,7 @@ class LockManager {
 
   std::atomic<bool> enable_cycle_detection_;
   std::thread *cycle_detection_thread_;
+
   /** Waits-for graph representation. */
   std::unordered_map<txn_id_t, std::vector<txn_id_t>> waits_for_;
   std::mutex waits_for_latch_;

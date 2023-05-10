@@ -424,12 +424,14 @@ auto LockManager::UnlockRow(Transaction *txn, const table_oid_t &oid, const RID 
   throw bustub::TransactionAbortException(txn->GetTransactionId(), AbortReason::ATTEMPTED_UNLOCK_BUT_NO_LOCK_HELD);
 }
 
+//在wait-for图中添加一条t1指向t2的边
 void LockManager::AddEdge(txn_id_t t1, txn_id_t t2) {
   txn_set_.insert(t1);
   txn_set_.insert(t2);
   waits_for_[t1].push_back(t2);
 }
 
+//在wait-for图中删除一条t1指向t2的边
 void LockManager::RemoveEdge(txn_id_t t1, txn_id_t t2) {
   auto iter = std::find(waits_for_[t1].begin(), waits_for_[t1].end(), t2);
   if (iter != waits_for_[t1].end()) {
@@ -437,6 +439,8 @@ void LockManager::RemoveEdge(txn_id_t t1, txn_id_t t2) {
   }
 }
 
+//检测wait-for图中是否存在环路，如果找到一个环，
+//HasCycle应该将该周期中最年轻的事务的事务id存储在txn_id中，并返回true。
 auto LockManager::HasCycle(txn_id_t *txn_id) -> bool {
   for (auto const &start_txn_id : txn_set_) {
     if (Dfs(start_txn_id)) {
@@ -447,11 +451,11 @@ auto LockManager::HasCycle(txn_id_t *txn_id) -> bool {
       active_set_.clear();
       return true;
     }
-
     active_set_.clear();
   }
   return false;
 }
+
 
 auto LockManager::DeleteNode(txn_id_t txn_id) -> void {
   waits_for_.erase(txn_id);
@@ -463,6 +467,7 @@ auto LockManager::DeleteNode(txn_id_t txn_id) -> void {
   }
 }
 
+//返回表示图中边的元组列表。一对（t1，t2）对应于从t1到t2的一个边缘。
 auto LockManager::GetEdgeList() -> std::vector<std::pair<txn_id_t, txn_id_t>> {
   std::vector<std::pair<txn_id_t, txn_id_t>> result;
   for (auto const &pair : waits_for_) {
@@ -474,6 +479,7 @@ auto LockManager::GetEdgeList() -> std::vector<std::pair<txn_id_t, txn_id_t>> {
   return result;
 }
 
+//RunCycleDDetection（）：包含用于在后台运行循环检测的框架代码
 void LockManager::RunCycleDetection() {
   while (enable_cycle_detection_) {
     std::this_thread::sleep_for(cycle_detection_interval);
@@ -515,12 +521,18 @@ void LockManager::RunCycleDetection() {
       row_lock_map_latch_.unlock();
       table_lock_map_latch_.unlock();
 
+      //如果检测到环，选 tid 最大的事务作为 youngest 事务终止
+      
       txn_id_t txn_id;
       while (HasCycle(&txn_id)) {
         Transaction *txn = TransactionManager::GetTransaction(txn_id);
+        //挑选出 youngest 事务后，将此事务的状态设为 Aborted。
         txn->SetState(TransactionState::ABORTED);
-        DeleteNode(txn_id);
 
+        //还需移除 wait for 图中与此事务有关的边。这是因为图中可能存在多个环，不是打破一个环就可以直接返回了。
+        //需要在死锁检测线程醒来的时候打破当前存在的所有环。
+        DeleteNode(txn_id);
+        //并且在请求队列中移除此事务，释放其持有的锁，终止其正在阻塞的请求，并调用 cv_.notify_all() 通知正在阻塞的相关事务。
         if (map_txn_oid_.count(txn_id) > 0) {
           table_lock_map_[map_txn_oid_[txn_id]]->latch_.lock();
           table_lock_map_[map_txn_oid_[txn_id]]->cv_.notify_all();
