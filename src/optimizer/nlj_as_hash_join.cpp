@@ -30,6 +30,7 @@ auto Optimizer::OptimizeNLJAsHashJoin(const AbstractPlanNodeRef &plan) -> Abstra
     BUSTUB_ENSURE(nlj_plan.children_.size() == 2, "NLJ should have exactly 2 children.");
 
     // Check if expr is equal condition where one is for the left table, and one is for the right table.
+    // 检查expr是否为相等条件，其中一个用于左表，一个用于右表。
     if (const auto *expr = dynamic_cast<const ComparisonExpression *>(&nlj_plan.Predicate()); expr != nullptr) {
       if (expr->comp_type_ == ComparisonType::Equal) {
         if (const auto *left_expr = dynamic_cast<const ColumnValueExpression *>(expr->children_[0].get());
