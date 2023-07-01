@@ -32,7 +32,7 @@ void InsertExecutor::Init() {
     if (!is_locked) {
       throw ExecutionException("Insert Executor Get Table Lock Failed");
     }
-  } catch (TransactionAbortException e) {
+  } catch (TransactionAbortException& e) {
     throw ExecutionException("Insert Executor Get Table Lock Failed");
   }
   //初始化时，通过exec_ctx_拿到表的索引
@@ -62,7 +62,7 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
         if (!is_locked) {
           throw ExecutionException("Insert Executor Get Row Lock Failed");
         }
-      } catch (TransactionAbortException e) {
+      } catch (TransactionAbortException& e) {
         throw ExecutionException("Insert Executor Get Row Lock Failed");
       }
 

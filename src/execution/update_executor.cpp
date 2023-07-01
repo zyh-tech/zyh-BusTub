@@ -30,7 +30,7 @@ void UpdateExecutor::Init() {
     if (!is_locked) {
       throw ExecutionException("Update Executor Get Table Lock Failed");
     }
-  } catch (TransactionAbortException e) {
+  } catch (TransactionAbortException& e) {
     throw ExecutionException("Update Executor Get Table Lock Failed");
   }
   table_indexes_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
@@ -51,7 +51,7 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
       if (!is_locked) {
         throw ExecutionException("Update Executor Get Row Lock Failed");
       }
-    } catch (TransactionAbortException e) {
+    } catch (TransactionAbortException& e) {
       throw ExecutionException("Update Executor Get Row Lock Failed");
     }
 
