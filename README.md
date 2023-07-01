@@ -1,5 +1,20 @@
 因为2021版中没有B+树，因此重新完成了一下2022版的实验课程，同时对之前2021实现中的一些不足进行了小优化，主要是优化了锁的粒度，提高了并发性能
 -----------------
+-----------------
+
+# 系统架构
+![avatar](/home/zyh/Projects/CMU15445-2022-FALL/logo/BusTub系统架构.png)
+
+# 完成思路及笔记：
+## Project1 Buffer Pool Manager 
+https://github.com/zyh-tech/zyh-BusTub/tree/refine/notes/Project1
+## Project2 B+Tree Index
+https://github.com/zyh-tech/zyh-BusTub/tree/refine/notes/Project2
+## Project3 Query Execution
+https://github.com/zyh-tech/zyh-BusTub/tree/refine/notes/Project3
+## Project4 Concurrency 
+https://github.com/zyh-tech/zyh-BusTub/tree/refine/notes/Project4
+
 
 <img src="logo/bustub-whiteborder.svg" alt="BusTub Logo" height="200">
 

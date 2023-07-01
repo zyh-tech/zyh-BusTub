@@ -82,7 +82,7 @@ select v, d1, d2 from (
 我实现的 Column Pruning 包括两个部分：
 
     *   遇到连续的两个 Projection，合并为 1 个，只取上层 Projection 所需列。
-    *   遇到 Projection +  *  Aggregation，改写 aggregates，截取 Projection 中需要的项目，其余直接抛弃。
+    *   遇到 Projection +  Aggregation，改写 aggregates，截取 Projection 中需要的项目，其余直接抛弃。
 
 同样地，我个人认为 Column Pruning 也是自顶向下地改写比较方便。具体实现是收集 Projection 里的所有 column，然后改写下层节点，仅保留上层需要 project 的 column。这里的 column 不一定是表中的 column，而是一种广义的 column，例如 SELECT t1.x + t1.y FROM t1 中的 t1.x + t1.y。
 

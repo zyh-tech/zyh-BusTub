@@ -4,7 +4,7 @@ Project 3 的难点在于读BUSTUB已经为我们实现的代码，理解查询�
 
 # 一条语句的执行流程
 先暂时抛开 transaction，bustub中一条sql语句经历的过程如下
-![alt 属性文本](https://pic4.zhimg.com/80/v2-8fa19e43fb28e16a705e97fcb12351cf_1440w.webp)
+![avatar](https://pic4.zhimg.com/80/v2-8fa19e43fb28e16a705e97fcb12351cf_1440w.webp)
 
 
 ## Parser
@@ -23,7 +23,7 @@ SELECT colA FROM table1;
 SELECT t1.y, t2.x FROM t1 INNER JOIN t2 ON t1.x = t2.y;
 对应的原始的查询计划是
 
-![alt 属性文本](https://pic4.zhimg.com/80/v2-16a1541a154797dc9c8c271ccca3ad9b_1440w.webp)
+![avatar](https://pic4.zhimg.com/80/v2-16a1541a154797dc9c8c271ccca3ad9b_1440w.webp)
 
 查询计划规定了数据的流向。数据从树叶流向树根，自底向上地流动，在根节点输出结果。
 
@@ -74,7 +74,7 @@ AbstractExpression 就是表达式树的节点。sql 中的所有表达式都会
 在 NestedLoopJoin 里，我们要用到的是 EvaluateJoin()，也差不多，只不过输入的是左右两个 tuple 和 schema。返回值是表示 true 或 false 的 value。true 则代表成功匹配。Join 输出的 schema 为 left schema + right schema。
 
 # Bustub 中 table 架构。
-![alt 属性文本](https://pic3.zhimg.com/80/v2-9bc6214441f8ca37004ff1389114a692_1440w.webp)
+![avatar](https://pic3.zhimg.com/80/v2-9bc6214441f8ca37004ff1389114a692_1440w.webp)
 
 ## Catalog
 首先，Bustub 有一个 Catalog。Catalog 提供了一系列 API，例如 CreateTable()、GetTable() 等等。Catalog 维护了几张 hashmap，保存了 table id 和 table name 到 table info 的映射关系。table id 由 Catalog 在新建 table 时自动分配，table name 则由用户指定。
