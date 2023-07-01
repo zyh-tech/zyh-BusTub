@@ -3,7 +3,7 @@
 -----------------
 
 # 系统架构
-![avatar](/home/zyh/Projects/CMU15445-2022-FALL/logo/BusTub系统架构.png)
+<img src="logo/BusTub系统架构.png" alt="系统架构" width="400">
 
 # 完成思路及笔记：
 ## Project1 Buffer Pool Manager 
